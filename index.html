@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="theme-color" content="#57663B">
+<meta name="description" content="تطبيق تدبير القطيع: عدد الغنم، الصحة والوزن">
+<title>قطيعي — تدبير الغنم</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ECEEE1;
+    --bg-card:#F8F9F1;
+    --ink:#33291F;
+    --ink-soft:#7A7161;
+    --line:#DEDACB;
+    --olive:#57663B;
+    --olive-dark:#414D2C;
+    --olive-tint:#E4E9D9;
+    --clay:#A15F38;
+    --clay-tint:#F3E3D6;
+    --male:#3E6670;
+    --male-tint:#E1EBEC;
+    --female:#8C4F63;
+    --female-tint:#F3E2E7;
+    --red:#A23B2F;
+    --amber:#B98226;
+    --green:#4E7A44;
+    --shadow: 0 8px 24px rgba(51,41,31,0.10);
+    --radius: 18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Tajawal', sans-serif;
+    direction:rtl;
+    min-height:100vh;
+    padding-bottom:100px;
+  }
+  .mono{font-family:'JetBrains Mono', monospace;}
+  h1,h2,h3,.display{font-family:'Cairo', sans-serif;}
+
+  /* ---------- Header ---------- */
+  header{
+    position:sticky; top:0; z-index:20;
+    background:rgba(236,238,225,0.92);
+    backdrop-filter: blur(6px);
+    padding:16px 18px 12px;
+    border-bottom:1px solid var(--line);
+  }
+  header h1{margin:0; font-size:22px; font-weight:800; color:var(--olive-dark);}
+  header p{margin:2px 0 0; font-size:13px; color:var(--ink-soft);}
+
+  main{max-width:520px; margin:0 auto; padding:18px 16px 0;}
+
+  /* ---------- Hero / wool blob ---------- */
+  .hero{ padding:18px 0 6px; text-align:center; }
+  .hero-blob{
+    position:relative;
+    width:190px; height:190px;
+    margin:10px auto 18px;
+    border-radius:58% 42% 54% 46% / 48% 58% 42% 52%;
+    background:var(--bg-card);
+    box-shadow: var(--shadow), inset 0 0 0 2px rgba(255,255,255,0.7);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tuft{
+    position:absolute;
+    background:var(--bg-card);
+    border-radius:50%;
+    box-shadow: 0 5px 12px rgba(51,41,31,0.08), inset 0 0 0 2px rgba(255,255,255,0.6);
+    z-index:0;
+  }
+  .tuft:nth-child(1){ width:66px;height:66px; top:-18px; right:6px;}
+  .tuft:nth-child(2){ width:48px;height:48px; top:-8px; left:-14px;}
+  .tuft:nth-child(3){ width:58px;height:58px; bottom:-18px; left:14px;}
+  .tuft:nth-child(4){ width:42px;height:42px; bottom:-14px; right:22px;}
+  .tuft:nth-child(5){ width:36px;height:36px; top:44%; right:-18px;}
+  .hero-content{ position:relative; z-index:1; }
+  .hero-number{ font-size:52px; font-weight:800; color:var(--olive-dark); line-height:1; font-family:'Cairo', sans-serif;}
+  .hero-label{ font-size:13px; color:var(--ink-soft); margin-top:4px; }
+  .hero-stats{ display:flex; gap:10px; justify-content:center; margin-top:6px; }
+  .stat-chip{
+    display:flex; align-items:center; gap:6px;
+    padding:6px 14px; border-radius:999px; font-size:13px; font-weight:700;
+  }
+  .stat-chip.male{ background:var(--male-tint); color:var(--male); }
+  .stat-chip.female{ background:var(--female-tint); color:var(--female); }
+
+  /* ---------- Reminders ---------- */
+  .reminders{ margin:14px 0; }
+  .reminder-card{
+    background:var(--clay-tint); border-radius:14px; padding:12px 14px;
+    display:flex; gap:10px; align-items:flex-start; margin-bottom:8px;
+    border-inline-start:4px solid var(--clay);
+  }
+  .reminder-card .dot{ font-size:16px; line-height:1.4; }
+  .reminder-card .txt{ font-size:13.5px; }
+  .reminder-card .txt b{ font-weight:700; }
+  .reminder-card .txt span{ color:var(--ink-soft); display:block; font-size:12px; margin-top:1px;}
+
+  /* ---------- Search / filter ---------- */
+  .toolbar{ display:flex; gap:8px; margin:16px 0 14px; }
+  .search-input{
+    flex:1; padding:10px 14px; border-radius:14px; border:1px solid var(--line);
+    background:var(--bg-card); font-family:'Tajawal',sans-serif; font-size:14px; color:var(--ink);
+  }
+  .search-input:focus-visible{ outline:2px solid var(--olive); outline-offset:1px; }
+  .filter-chips{ display:flex; gap:6px; margin-bottom:14px; }
+  .chip-btn{
+    padding:7px 14px; border-radius:999px; border:1px solid var(--line); background:var(--bg-card);
+    font-family:'Tajawal',sans-serif; font-size:13px; color:var(--ink-soft); cursor:pointer;
+  }
+  .chip-btn.active{ background:var(--olive); border-color:var(--olive); color:#fff; }
+  .chip-btn:focus-visible{ outline:2px solid var(--olive-dark); outline-offset:2px; }
+
+  /* ---------- Sheep list ---------- */
+  .sheep-card{
+    display:flex; align-items:center; gap:12px;
+    background:var(--bg-card); border-radius:16px; padding:12px 14px; margin-bottom:10px;
+    box-shadow:0 2px 8px rgba(51,41,31,0.06); cursor:pointer; border:1px solid transparent;
+  }
+  .sheep-card:hover{ border-color:var(--line); }
+  .sheep-card:focus-visible{ outline:2px solid var(--olive); outline-offset:2px; }
+  .tag-badge{
+    width:42px; height:42px; border-radius:12px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:19px; font-weight:700;
+  }
+  .tag-badge.male{ background:var(--male-tint); color:var(--male); }
+  .tag-badge.female{ background:var(--female-tint); color:var(--female); }
+  .sheep-info{ flex:1; min-width:0; }
+  .sheep-info .name{ font-weight:700; font-size:15px; }
+  .sheep-info .meta{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .sheep-info .meta .mono{ font-size:12px; }
+  .status-dot{ width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+  .status-dot.green{ background:var(--green); }
+  .status-dot.amber{ background:var(--amber); }
+  .status-dot.red{ background:var(--red); }
+  .status-dot.grey{ background:#C7C2B2; }
+
+  .empty-state{ text-align:center; padding:50px 20px; color:var(--ink-soft); }
+  .empty-state .big{ font-size:40px; margin-bottom:8px; }
+  .empty-state p{ font-size:14px; line-height:1.6; margin:6px 0 0; }
+
+  /* ---------- FAB ---------- */
+  .fab{
+    position:fixed; bottom:24px; left:20px; z-index:30;
+    width:58px; height:58px; border-radius:50%;
+    background:var(--olive); color:#fff; border:none;
+    font-size:28px; box-shadow:0 10px 22px rgba(65,77,44,0.35);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .fab:focus-visible{ outline:2px solid var(--olive-dark); outline-offset:3px; }
+
+  /* ---------- Sheets / modals ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(51,41,31,0.42); z-index:40;
+    display:none; align-items:flex-end;
+  }
+  .overlay.open{ display:flex; }
+  .sheet{
+    background:var(--bg); width:100%; max-width:520px; margin:0 auto;
+    border-radius:22px 22px 0 0; max-height:88vh; overflow-y:auto;
+    padding:10px 18px 24px; box-shadow:0 -10px 30px rgba(0,0,0,0.2);
+  }
+  .sheet-handle{ width:40px; height:4px; background:var(--line); border-radius:3px; margin:6px auto 14px; }
+  .sheet-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .sheet-header h2{ font-size:18px; margin:0; }
+  .icon-btn{
+    background:none; border:none; font-size:20px; color:var(--ink-soft); cursor:pointer; padding:4px 8px;
+  }
+  .icon-btn:focus-visible{ outline:2px solid var(--olive); border-radius:8px; }
+
+  label{ display:block; font-size:13px; color:var(--ink-soft); margin:12px 0 5px; font-weight:500; }
+  input[type=text], input[type=number], input[type=date], select, textarea{
+    width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line);
+    background:var(--bg-card); font-family:'Tajawal',sans-serif; font-size:14.5px; color:var(--ink);
+  }
+  input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--olive); outline-offset:1px;
+  }
+  .seg{ display:flex; gap:8px; margin-top:5px; }
+  .seg button{
+    flex:1; padding:9px 0; border-radius:12px; border:1px solid var(--line); background:var(--bg-card);
+    font-family:'Tajawal',sans-serif; font-size:14px; color:var(--ink-soft); cursor:pointer;
+  }
+  .seg button.active.male{ background:var(--male); border-color:var(--male); color:#fff; }
+  .seg button.active.female{ background:var(--female); border-color:var(--female); color:#fff; }
+
+  .btn-primary{
+    width:100%; margin-top:18px; padding:13px 0; border-radius:14px; border:none;
+    background:var(--olive); color:#fff; font-family:'Cairo',sans-serif; font-weight:700; font-size:15px;
+    cursor:pointer;
+  }
+  .btn-primary:focus-visible{ outline:2px solid var(--olive-dark); outline-offset:2px; }
+  .btn-secondary{
+    width:100%; margin-top:10px; padding:11px 0; border-radius:14px; border:1px solid var(--line);
+    background:transparent; color:var(--ink-soft); font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer;
+  }
+  .btn-danger{
+    width:100%; margin-top:10px; padding:11px 0; border-radius:14px; border:1px solid var(--red);
+    background:transparent; color:var(--red); font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer;
+  }
+  .btn-danger.confirming{ background:var(--red); color:#fff; }
+
+  /* ---------- Detail sheet sections ---------- */
+  .profile-head{ display:flex; align-items:center; gap:14px; margin-bottom:6px; }
+  .profile-head .tag-badge{ width:54px; height:54px; font-size:23px; border-radius:16px; }
+  .profile-head .p-name{ font-size:19px; font-weight:700; }
+  .profile-head .p-meta{ font-size:13px; color:var(--ink-soft); margin-top:2px; }
+
+  .section-title{
+    font-size:14px; font-weight:700; color:var(--olive-dark); margin:20px 0 8px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .link-btn{ background:none; border:none; color:var(--olive); font-size:13px; font-weight:700; cursor:pointer; font-family:'Tajawal',sans-serif; }
+
+  .weight-current{ font-size:26px; font-weight:800; font-family:'Cairo',sans-serif; color:var(--olive-dark); }
+  .weight-current span{ font-size:14px; font-weight:500; color:var(--ink-soft); }
+  .sparkline-wrap{ margin-top:8px; }
+
+  .log-item{
+    display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);
+  }
+  .log-item:last-child{ border-bottom:none; }
+  .log-dot{ width:9px; height:9px; border-radius:50%; margin-top:6px; flex-shrink:0; }
+  .log-item .log-body{ flex:1; }
+  .log-item .log-type{ font-size:14px; font-weight:700; }
+  .log-item .log-date{ font-size:12px; color:var(--ink-soft); }
+  .log-item .log-note{ font-size:13px; color:var(--ink-soft); margin-top:2px; }
+  .log-item .log-due{ font-size:12px; margin-top:3px; font-weight:700; }
+
+  .toast{
+    position:fixed; bottom:96px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px;
+    font-size:13.5px; z-index:60; opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .toast.show{ opacity:1; }
+
+  .loading{ text-align:center; padding:60px 20px; color:var(--ink-soft); font-size:14px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🐑 قطيعي</h1>
+  <p>تدبير القطيع، الصحة والوزن — فبلاصة وحدة</p>
+</header>
+
+<main id="main">
+  <div class="loading" id="loading">كيتحمل...</div>
+</main>
+
+<button class="fab" id="fabAdd" style="display:none" aria-label="زيد خروف">+</button>
+
+<!-- Add/Edit Sheep Sheet -->
+<div class="overlay" id="overlayAdd">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h2 id="addSheetTitle">زيادة خروف جديد</h2>
+      <button class="icon-btn" id="closeAdd">✕</button>
+    </div>
+    <form id="addForm">
+      <label for="f_tag">رقم الوسم *</label>
+      <input type="text" id="f_tag" class="mono" required placeholder="مثال: 014">
+
+      <label for="f_name">الاسم (اختياري)</label>
+      <input type="text" id="f_name" placeholder="مثال: بيضة">
+
+      <label>الجنس *</label>
+      <div class="seg" id="genderSeg">
+        <button type="button" data-g="ذكر" class="g-btn">🐏 ذكر</button>
+        <button type="button" data-g="أنثى" class="g-btn">🐑 أنثى</button>
+      </div>
+
+      <label for="f_birth">تاريخ الازدياد (اختياري)</label>
+      <input type="date" id="f_birth">
+
+      <label for="f_weight">الوزن الحالي بالكيلو (اختياري)</label>
+      <input type="number" id="f_weight" step="0.1" min="0" placeholder="مثال: 32.5">
+
+      <button type="submit" class="btn-primary" id="submitAddBtn">حفظ</button>
+      <button type="button" class="btn-secondary" id="cancelAdd">إلغاء</button>
+    </form>
+  </div>
+</div>
+
+<!-- Detail Sheet -->
+<div class="overlay" id="overlayDetail">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h2>معلومات الخروف</h2>
+      <button class="icon-btn" id="closeDetail">✕</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<!-- Add Weight Sheet -->
+<div class="overlay" id="overlayWeight">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h2>تسجيل وزن جديد</h2>
+      <button class="icon-btn" id="closeWeight">✕</button>
+    </div>
+    <form id="weightForm">
+      <label for="w_date">التاريخ</label>
+      <input type="date" id="w_date" required>
+      <label for="w_val">الوزن بالكيلو</label>
+      <input type="number" id="w_val" step="0.1" min="0" required>
+      <button type="submit" class="btn-primary">حفظ الوزن</button>
+      <button type="button" class="btn-secondary" id="cancelWeight">إلغاء</button>
+    </form>
+  </div>
+</div>
+
+<!-- Add Health Sheet -->
+<div class="overlay" id="overlayHealth">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h2>تسجيل صحي جديد</h2>
+      <button class="icon-btn" id="closeHealth">✕</button>
+    </div>
+    <form id="healthForm">
+      <label>نوع التسجيل</label>
+      <div class="seg" id="healthTypeSeg">
+        <button type="button" data-t="تلقيح" class="h-btn">تلقيح</button>
+        <button type="button" data-t="علاج" class="h-btn">علاج</button>
+        <button type="button" data-t="فحص" class="h-btn">فحص</button>
+      </div>
+      <label for="h_date">التاريخ</label>
+      <input type="date" id="h_date" required>
+      <label for="h_note">ملاحظة (اختياري)</label>
+      <textarea id="h_note" rows="2" placeholder="مثال: تلقيح ضد الجرب"></textarea>
+      <label for="h_due">تاريخ الاستحقاق القادم (اختياري)</label>
+      <input type="date" id="h_due">
+      <button type="submit" class="btn-primary">حفظ</button>
+      <button type="button" class="btn-secondary" id="cancelHealth">إلغاء</button>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------------- State ----------------
+let sheepList = [];
+let filterGender = 'all';
+let searchTerm = '';
+let activeSheepId = null;
+let selectedGender = null;
+let selectedHealthType = null;
+let deleteConfirmArmed = false;
+
+const STORAGE_KEY = 'sheep-data';
+
+// ---------------- Storage ----------------
+async function loadSheep(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    return [];
+  }
+}
+async function saveSheep(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sheepList));
+  }catch(e){
+    showToast('تعذر حفظ التغييرات');
+  }
+}
+
+// ---------------- Helpers ----------------
+function genId(){
+  return 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+function fmtDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  const months = ['يناير','فبراير','مارس','أبريل','ماي','يونيو','يوليوز','غشت','شتنبر','أكتوبر','نونبر','دجنبر'];
+  return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+function todayISO(){
+  return new Date().toISOString().slice(0,10);
+}
+function ageLabel(birth){
+  if(!birth) return 'العمر غير معروف';
+  const b = new Date(birth);
+  const now = new Date();
+  let months = (now.getFullYear()-b.getFullYear())*12 + (now.getMonth()-b.getMonth());
+  if(now.getDate() < b.getDate()) months--;
+  if(months < 0) months = 0;
+  if(months < 12) return months + ' شهر';
+  const years = Math.floor(months/12);
+  const rem = months%12;
+  return years + ' سنة' + (rem>0 ? ' و '+rem+' شهر' : '');
+}
+function daysUntil(dateStr){
+  const d = new Date(dateStr);
+  const now = new Date();
+  d.setHours(0,0,0,0); now.setHours(0,0,0,0);
+  return Math.round((d-now)/86400000);
+}
+function currentWeight(sheep){
+  if(!sheep.weights || sheep.weights.length===0) return null;
+  const sorted = [...sheep.weights].sort((a,b)=> new Date(a.date)-new Date(b.date));
+  return sorted[sorted.length-1].value;
+}
+function healthStatus(sheep){
+  if(!sheep.health || sheep.health.length===0) return 'grey';
+  const dues = sheep.health.filter(h=>h.due).map(h=>daysUntil(h.due));
+  if(dues.length===0) return 'grey';
+  const min = Math.min(...dues);
+  if(min < 0) return 'red';
+  if(min <= 14) return 'amber';
+  return 'green';
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+// ---------------- Rendering ----------------
+function render(){
+  const main = document.getElementById('main');
+  const total = sheepList.length;
+  const males = sheepList.filter(s=>s.gender==='ذكر').length;
+  const females = sheepList.filter(s=>s.gender==='أنثى').length;
+
+  let html = '';
+
+  // Hero
+  html += `
+  <div class="hero">
+    <div class="hero-blob">
+      <span class="tuft"></span><span class="tuft"></span><span class="tuft"></span>
+      <span class="tuft"></span><span class="tuft"></span>
+      <div class="hero-content">
+        <div class="hero-number">${total}</div>
+        <div class="hero-label">خروف فالقطيع</div>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-chip male">🐏 ${males} ذكور</div>
+      <div class="stat-chip female">🐑 ${females} إناث</div>
+    </div>
+  </div>`;
+
+  // Reminders
+  const reminders = [];
+  sheepList.forEach(s=>{
+    (s.health||[]).forEach(h=>{
+      if(h.due){
+        const dl = daysUntil(h.due);
+        if(dl <= 14){
+          reminders.push({sheep:s, record:h, days:dl});
+        }
+      }
+    });
+  });
+  reminders.sort((a,b)=>a.days-b.days);
+  if(reminders.length>0){
+    html += `<div class="reminders">`;
+    reminders.slice(0,6).forEach(r=>{
+      const label = r.sheep.name ? r.sheep.name : r.sheep.tag;
+      const status = r.days < 0 ? `متأخرة (${Math.abs(r.days)} يوم)` : (r.days===0 ? 'اليوم' : `فـ ${r.days} يوم`);
+      html += `<div class="reminder-card">
+        <span class="dot">🔔</span>
+        <div class="txt"><b>${escapeHtml(label)}</b> — ${escapeHtml(r.record.type)}
+        <span>${status} · ${fmtDate(r.record.due)}</span></div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Toolbar
+  html += `
+  <div class="toolbar">
+    <input type="text" class="search-input" id="searchInput" placeholder="قلب برقم الوسم ولا الاسم..." value="${escapeAttr(searchTerm)}">
+  </div>
+  <div class="filter-chips">
+    <button class="chip-btn ${filterGender==='all'?'active':''}" data-f="all">الكل</button>
+    <button class="chip-btn ${filterGender==='ذكر'?'active':''}" data-f="ذكر">ذكور</button>
+    <button class="chip-btn ${filterGender==='أنثى'?'active':''}" data-f="أنثى">إناث</button>
+  </div>`;
+
+  // List
+  let list = sheepList.filter(s=>{
+    if(filterGender!=='all' && s.gender!==filterGender) return false;
+    if(searchTerm){
+      const t = searchTerm.trim().toLowerCase();
+      const hay = (s.tag+' '+(s.name||'')).toLowerCase();
+      if(!hay.includes(t)) return false;
+    }
+    return true;
+  });
+  list.sort((a,b)=> a.tag.localeCompare(b.tag, undefined, {numeric:true}));
+
+  if(sheepList.length===0){
+    html += `
+    <div class="empty-state">
+      <div class="big">🐑</div>
+      <h3 class="display">مازال ما عندكش غنم مسجلين</h3>
+      <p>دوس على "+" باش تزيد أول خروف للقطيع ديالك.</p>
+    </div>`;
+  } else if(list.length===0){
+    html += `<div class="empty-state"><div class="big">🔍</div><p>ما لقيتش نتيجة</p></div>`;
+  } else {
+    list.forEach(s=>{
+      const w = currentWeight(s);
+      const status = healthStatus(s);
+      const icon = s.gender==='ذكر' ? '🐏' : '🐑';
+      html += `
+      <div class="sheep-card" tabindex="0" data-id="${s.id}">
+        <div class="tag-badge ${s.gender==='ذكر'?'male':'female'}">${icon}</div>
+        <div class="sheep-info">
+          <div class="name">${escapeHtml(s.name || s.tag)}</div>
+          <div class="meta"><span class="mono">#${escapeHtml(s.tag)}</span> · ${ageLabel(s.birth)}${w!==null ? ' · '+w+' كغ' : ''}</div>
+        </div>
+        <div class="status-dot ${status}"></div>
+      </div>`;
+    });
+  }
+
+  main.innerHTML = html;
+
+  document.getElementById('searchInput').addEventListener('input', e=>{
+    searchTerm = e.target.value;
+    render();
+    document.getElementById('searchInput').focus();
+    const val = document.getElementById('searchInput').value;
+    document.getElementById('searchInput').setSelectionRange(val.length, val.length);
+  });
+  document.querySelectorAll('.chip-btn').forEach(b=>{
+    b.addEventListener('click', ()=>{ filterGender = b.dataset.f; render(); });
+  });
+  document.querySelectorAll('.sheep-card').forEach(c=>{
+    c.addEventListener('click', ()=> openDetail(c.dataset.id));
+    c.addEventListener('keydown', e=>{ if(e.key==='Enter') openDetail(c.dataset.id); });
+  });
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+// ---------------- Sparkline ----------------
+function renderSparkline(weights){
+  if(!weights || weights.length===0){
+    return '<p style="font-size:13px;color:var(--ink-soft)">مازال ماكاين تسجيل للوزن</p>';
+  }
+  const sorted = [...weights].sort((a,b)=> new Date(a.date)-new Date(b.date));
+  const vals = sorted.map(w=>w.value);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = (max-min) || 1;
+  const w = 280, h = 70, pad = 8;
+  const pts = sorted.map((pt,i)=>{
+    const x = sorted.length===1 ? w/2 : pad + (i/(sorted.length-1))*(w-2*pad);
+    const y = h - pad - ((pt.value-min)/range)*(h-2*pad);
+    return x+','+y;
+  }).join(' ');
+  const dots = sorted.map((pt,i)=>{
+    const x = sorted.length===1 ? w/2 : pad + (i/(sorted.length-1))*(w-2*pad);
+    const y = h - pad - ((pt.value-min)/range)*(h-2*pad);
+    return `<circle cx="${x}" cy="${y}" r="3" fill="#57663B"/>`;
+  }).join('');
+  return `<svg class="sparkline-wrap" viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+    <polyline points="${pts}" fill="none" stroke="#57663B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}
+  </svg>`;
+}
+
+// ---------------- Detail Sheet ----------------
+function openDetail(id){
+  activeSheepId = id;
+  const s = sheepList.find(x=>x.id===id);
+  if(!s) return;
+  const icon = s.gender==='ذكر' ? '🐏' : '🐑';
+  const w = currentWeight(s);
+  const weights = [...(s.weights||[])].sort((a,b)=> new Date(b.date)-new Date(a.date));
+  const health = [...(s.health||[])].sort((a,b)=> new Date(b.date)-new Date(a.date));
+
+  let html = `
+  <div class="profile-head">
+    <div class="tag-badge ${s.gender==='ذكر'?'male':'female'}">${icon}</div>
+    <div>
+      <div class="p-name">${escapeHtml(s.name || s.tag)}</div>
+      <div class="p-meta"><span class="mono">#${escapeHtml(s.tag)}</span> · ${s.gender} · ${ageLabel(s.birth)}</div>
+    </div>
+  </div>
+
+  <div class="section-title">الوزن <button class="link-btn" id="addWeightBtn">+ إضافة</button></div>
+  <div class="weight-current">${w!==null ? w : '—'} <span>كغ (آخر تسجيل)</span></div>
+  <div id="sparklineHolder">${renderSparkline(s.weights)}</div>
+
+  <div class="section-title">السجل الصحي <button class="link-btn" id="addHealthBtn">+ إضافة</button></div>
+  <div id="healthLog">`;
+
+  if(health.length===0){
+    html += `<p style="font-size:13px;color:var(--ink-soft)">مازال ماكاين تسجيل صحي</p>`;
+  } else {
+    health.forEach(h=>{
+      let dueColor = '';
+      let dueTxt = '';
+      if(h.due){
+        const dl = daysUntil(h.due);
+        dueColor = dl < 0 ? 'var(--red)' : (dl<=14 ? 'var(--amber)' : 'var(--green)');
+        dueTxt = `الاستحقاق: ${fmtDate(h.due)}${dl<0 ? ' (متأخر)' : ''}`;
+      }
+      html += `
+      <div class="log-item">
+        <span class="log-dot" style="background:${dueColor || '#C7C2B2'}"></span>
+        <div class="log-body">
+          <div class="log-type">${escapeHtml(h.type)}</div>
+          <div class="log-date">${fmtDate(h.date)}</div>
+          ${h.note ? `<div class="log-note">${escapeHtml(h.note)}</div>` : ''}
+          ${dueTxt ? `<div class="log-due" style="color:${dueColor}">${dueTxt}</div>` : ''}
+        </div>
+      </div>`;
+    });
+  }
+  html += `</div>`;
+
+  html += `
+  <button class="btn-danger" id="deleteSheepBtn">حذف هاد الخروف</button>`;
+
+  document.getElementById('detailBody').innerHTML = html;
+  deleteConfirmArmed = false;
+
+  document.getElementById('addWeightBtn').addEventListener('click', ()=>{
+    document.getElementById('w_date').value = todayISO();
+    document.getElementById('w_val').value = '';
+    document.getElementById('overlayWeight').classList.add('open');
+  });
+  document.getElementById('addHealthBtn').addEventListener('click', ()=>{
+    selectedHealthType = null;
+    document.querySelectorAll('.h-btn').forEach(b=>b.classList.remove('active','olive'));
+    document.getElementById('h_date').value = todayISO();
+    document.getElementById('h_note').value = '';
+    document.getElementById('h_due').value = '';
+    document.getElementById('overlayHealth').classList.add('open');
+  });
+  document.getElementById('deleteSheepBtn').addEventListener('click', ()=>{
+    const btn = document.getElementById('deleteSheepBtn');
+    if(!deleteConfirmArmed){
+      deleteConfirmArmed = true;
+      btn.textContent = 'متأكد؟ دوس مرة أخرى للحذف';
+      btn.classList.add('confirming');
+    } else {
+      sheepList = sheepList.filter(x=>x.id!==activeSheepId);
+      saveSheep();
+      document.getElementById('overlayDetail').classList.remove('open');
+      render();
+      showToast('تحذف الخروف');
+    }
+  });
+
+  document.getElementById('overlayDetail').classList.add('open');
+}
+
+// ---------------- Event wiring (static) ----------------
+document.getElementById('fabAdd').addEventListener('click', ()=>{
+  document.getElementById('addForm').reset();
+  selectedGender = null;
+  document.querySelectorAll('.g-btn').forEach(b=>b.classList.remove('active','male','female'));
+  document.getElementById('overlayAdd').classList.add('open');
+});
+document.getElementById('closeAdd').addEventListener('click', ()=> document.getElementById('overlayAdd').classList.remove('open'));
+document.getElementById('cancelAdd').addEventListener('click', ()=> document.getElementById('overlayAdd').classList.remove('open'));
+document.getElementById('overlayAdd').addEventListener('click', e=>{ if(e.target.id==='overlayAdd') e.currentTarget.classList.remove('open'); });
+
+document.querySelectorAll('.g-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    selectedGender = b.dataset.g;
+    document.querySelectorAll('.g-btn').forEach(x=>x.classList.remove('active','male','female'));
+    b.classList.add('active', b.dataset.g==='ذكر' ? 'male':'female');
+  });
+});
+
+document.getElementById('addForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const tag = document.getElementById('f_tag').value.trim();
+  const name = document.getElementById('f_name').value.trim();
+  const birth = document.getElementById('f_birth').value;
+  const weight = document.getElementById('f_weight').value;
+  if(!tag){ showToast('خاصك تدخل رقم الوسم'); return; }
+  if(!selectedGender){ showToast('خاصك تختار الجنس'); return; }
+
+  const newSheep = {
+    id: genId(),
+    tag, name, gender: selectedGender, birth: birth || null,
+    weights: [], health: []
+  };
+  if(weight){
+    newSheep.weights.push({date: todayISO(), value: parseFloat(weight)});
+  }
+  sheepList.push(newSheep);
+  await saveSheep();
+  document.getElementById('overlayAdd').classList.remove('open');
+  render();
+  showToast('تزاد الخروف للقطيع');
+});
+
+document.getElementById('closeDetail').addEventListener('click', ()=> document.getElementById('overlayDetail').classList.remove('open'));
+document.getElementById('overlayDetail').addEventListener('click', e=>{ if(e.target.id==='overlayDetail') e.currentTarget.classList.remove('open'); });
+
+document.getElementById('closeWeight').addEventListener('click', ()=> document.getElementById('overlayWeight').classList.remove('open'));
+document.getElementById('cancelWeight').addEventListener('click', ()=> document.getElementById('overlayWeight').classList.remove('open'));
+document.getElementById('overlayWeight').addEventListener('click', e=>{ if(e.target.id==='overlayWeight') e.currentTarget.classList.remove('open'); });
+
+document.getElementById('weightForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const s = sheepList.find(x=>x.id===activeSheepId);
+  if(!s) return;
+  const date = document.getElementById('w_date').value;
+  const val = parseFloat(document.getElementById('w_val').value);
+  if(!date || isNaN(val)) return;
+  s.weights = s.weights || [];
+  s.weights.push({date, value: val});
+  await saveSheep();
+  document.getElementById('overlayWeight').classList.remove('open');
+  openDetail(activeSheepId);
+  render();
+  showToast('تسجل الوزن');
+});
+
+document.getElementById('closeHealth').addEventListener('click', ()=> document.getElementById('overlayHealth').classList.remove('open'));
+document.getElementById('cancelHealth').addEventListener('click', ()=> document.getElementById('overlayHealth').classList.remove('open'));
+document.getElementById('overlayHealth').addEventListener('click', e=>{ if(e.target.id==='overlayHealth') e.currentTarget.classList.remove('open'); });
+
+document.querySelectorAll('.h-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    selectedHealthType = b.dataset.t;
+    document.querySelectorAll('.h-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    b.style.background = 'var(--olive)';
+    b.style.color = '#fff';
+    b.style.borderColor = 'var(--olive)';
+    document.querySelectorAll('.h-btn').forEach(x=>{
+      if(x!==b){ x.style.background=''; x.style.color=''; x.style.borderColor=''; }
+    });
+  });
+});
+
+document.getElementById('healthForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const s = sheepList.find(x=>x.id===activeSheepId);
+  if(!s) return;
+  if(!selectedHealthType){ showToast('خاصك تختار نوع التسجيل'); return; }
+  const date = document.getElementById('h_date').value;
+  const note = document.getElementById('h_note').value.trim();
+  const due = document.getElementById('h_due').value;
+  if(!date) return;
+  s.health = s.health || [];
+  s.health.push({type: selectedHealthType, date, note: note || null, due: due || null});
+  await saveSheep();
+  document.getElementById('overlayHealth').classList.remove('open');
+  openDetail(activeSheepId);
+  render();
+  showToast('تسجل السجل الصحي');
+});
+
+// ---------------- Init ----------------
+(async function init(){
+  sheepList = await loadSheep();
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('fabAdd').style.display = 'flex';
+  render();
+})();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
